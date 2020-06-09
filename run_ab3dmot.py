@@ -96,7 +96,7 @@ def run_ab3dmot(
         lidar_timestamps = [ int(file.split(".")[0].split("_")[-1]) for file in lis]
         lidar_timestamps.sort()
         previous_frame_bbox = []
-        ab3dmot = AB3DMOT(max_age=max_age,min_hits=min_hits)
+        ab3dmot = AB3DMOT(classname, max_age=max_age,min_hits=min_hits)
         print(labels_folder)
         tracked_labels_copy = []
         for j, current_lidar_timestamp in enumerate(lidar_timestamps):

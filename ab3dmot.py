@@ -4,7 +4,7 @@ from filterpy.kalman import KalmanFilter
 import matplotlib.pyplot as plt
 import numpy as np
 import pdb
-from sklearn.utils.linear_assignment_ import linear_assignment
+from scipy.optimize import linear_sum_assignment as linear_assignment
 import sys
 import time
 
@@ -17,7 +17,7 @@ class KalmanBoxTracker(object):
   This class represents the internel state of individual tracked objects observed as bbox.
   """
   count = 0
-  def __init__(self, bbox3D, info):
+  def __init__(self, classname, bbox3D, info):
     """
     Initialises a tracker using initial bounding box.
     """
@@ -65,13 +65,23 @@ class KalmanBoxTracker(object):
     #                       [0,0,0,0,0,0,1,0,0,0,0]])
 
     # self.kf.R[0:,0:] *= 10.   # measurement uncertainty
-    self.kf.P[7:,7:] *= 1000. #state uncertainty, give high uncertainty to the unobservable initial velocities, covariance matrix
-    self.kf.P *= 10.
+  
+    self.classname = classname
+    if self.classname == "VEHICLE":
+      self.kf.P = np.diag([0.08900372, 0.09412005, 0.03265469, 1.00535696, 0.10912802, 0.02359175, 0.02455134, 0.08120681, 0.08224643, 0.02266425])
+      self.kf.Q = np.diag([1.58918523e-01, 1.24935318e-01, 5.35573165e-03, 9.22800791e-02, 0, 0, 0, 1.58918523e-01, 1.24935318e-01, 5.35573165e-03])
+      self.kf.R = np.diag([0.08900372, 0.09412005, 0.03265469, 1.00535696, 0.10912802, 0.02359175, 0.02455134])
+    elif self.classname == "PEDESTRIAN":
+      self.kf.P = np.diag([0.03855275, 0.0377111 , 0.02482115, 2.0751833 , 0.02286483, 0.0136347 , 0.0203149 , 0.04237008, 0.04092393, 0.01482923])
+      self.kf.Q = np.diag([3.34814566e-02, 2.47354921e-02, 5.94592529e-03, 4.24962535e-01, 0, 0, 0, 3.34814566e-02, 2.47354921e-02, 5.94592529e-03])
+      self.kf.R = np.diag([0.03855275, 0.0377111 , 0.02482115, 2.0751833 , 0.02286483, 0.0136347, 0.0203149])
+    else:
+      self.kf.P[7:,7:] *= 1000. #state uncertainty, give high uncertainty to the unobservable initial velocities, covariance matrix
+      self.kf.P *= 10.
+      # self.kf.Q[-1,-1] *= 0.01    # process uncertainty
+      self.kf.Q[7:,7:] *= 0.01
     
-    # self.kf.Q[-1,-1] *= 0.01    # process uncertainty
-    self.kf.Q[7:,7:] *= 0.01
     self.kf.x[:7] = bbox3D.reshape((7, 1))
-
     self.time_since_update = 0
     self.id = KalmanBoxTracker.count
     KalmanBoxTracker.count += 1
@@ -82,7 +92,8 @@ class KalmanBoxTracker(object):
     self.still_first = True
     self.age = 0
     self.info = info        # other info
-
+    pass
+  
   def update(self, bbox3D, info): 
     """ 
     Updates the state vector with observed bbox.
@@ -169,6 +180,7 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold=0.1):
       iou_matrix[d,t] = compute_iou_2d_bboxes(det, trk)
 
   matched_indices = linear_assignment(-iou_matrix)      # hungarian algorithm
+  matched_indices = np.column_stack(matched_indices)
 
   unmatched_detections = []
   for d,det in enumerate(detections):
@@ -198,17 +210,18 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold=0.1):
 
 
 class AB3DMOT(object):
-  def __init__(self,max_age=2,min_hits=3):      # max age will preserve the bbox does not appear no more than 2 frames, interpolate the detection
-  # def __init__(self,max_age=3,min_hits=3):        # ablation study
-  # def __init__(self,max_age=1,min_hits=3):      
-  # def __init__(self,max_age=2,min_hits=1):      
-  # def __init__(self,max_age=2,min_hits=5):      
+  def __init__(self, classname, max_age=2,min_hits=3):      # max age will preserve the bbox does not appear no more than 2 frames, interpolate the detection
+    # def __init__(self,max_age=3,min_hits=3):        # ablation study
+    # def __init__(self,max_age=1,min_hits=3):      
+    # def __init__(self,max_age=2,min_hits=1):      
+    # def __init__(self,max_age=2,min_hits=5):      
     """              
     """
     self.max_age = max_age
     self.min_hits = min_hits
     self.trackers = []
     self.frame_count = 0
+    self.classname = classname
     # self.reorder = [3, 4, 5, 6, 2, 1, 0]
     # self.reorder_back = [6, 5, 4, 0, 1, 2, 3]
 
@@ -254,7 +267,7 @@ class AB3DMOT(object):
 
     #create and initialise new trackers for unmatched detections
     for i in unmatched_dets:        # a scalar of index
-        trk = KalmanBoxTracker(dets[i,:], info[i, :]) 
+        trk = KalmanBoxTracker(self.classname, dets[i,:], info[i, :]) 
         self.trackers.append(trk)
     i = len(self.trackers)
     for trk in reversed(self.trackers):
