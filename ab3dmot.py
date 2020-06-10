@@ -68,13 +68,17 @@ class KalmanBoxTracker(object):
   
     self.classname = classname
     if self.classname == "VEHICLE":
-      self.kf.P = np.diag([0.08900372, 0.09412005, 0.03265469, 1.00535696, 0.10912802, 0.02359175, 0.02455134, 0.08120681, 0.08224643, 0.02266425])
-      self.kf.Q = np.diag([1.58918523e-01, 1.24935318e-01, 5.35573165e-03, 9.22800791e-02, 0, 0, 0, 1.58918523e-01, 1.24935318e-01, 5.35573165e-03])
-      self.kf.R = np.diag([0.08900372, 0.09412005, 0.03265469, 1.00535696, 0.10912802, 0.02359175, 0.02455134])
+      self.kf.P[7:,7:] *= 1000. #state uncertainty, give high uncertainty to the unobservable initial velocities, covariance matrix
+      self.kf.P *= 10.
+      self.kf.Q = np.diag([4.28608065e-02, 4.83431856e-02, 2.28783624e-01, 4.15348634e+03, 6.61465835e+02, \
+        8.72206718e-01, 9.48450563e+00, 5.71719333e-01, 4.34452682e-01, 2.15790151e-02])
+
     elif self.classname == "PEDESTRIAN":
-      self.kf.P = np.diag([0.03855275, 0.0377111 , 0.02482115, 2.0751833 , 0.02286483, 0.0136347 , 0.0203149 , 0.04237008, 0.04092393, 0.01482923])
-      self.kf.Q = np.diag([3.34814566e-02, 2.47354921e-02, 5.94592529e-03, 4.24962535e-01, 0, 0, 0, 3.34814566e-02, 2.47354921e-02, 5.94592529e-03])
-      self.kf.R = np.diag([0.03855275, 0.0377111 , 0.02482115, 2.0751833 , 0.02286483, 0.0136347, 0.0203149])
+      self.kf.P[7:,7:] *= 1000. #state uncertainty, give high uncertainty to the unobservable initial velocities, covariance matrix
+      self.kf.P *= 10.
+      self.kf.Q = np.diag([2.23634146e-02, 1.79376861e-02, 1.92915952e-02, 2.14261851e+03, 2.97151716e+02, \
+         1.85100157e-01, 6.02065445e+00, 1.79828381e-01, 6.98850253e-02, 5.84408290e-03])
+
     else:
       self.kf.P[7:,7:] *= 1000. #state uncertainty, give high uncertainty to the unobservable initial velocities, covariance matrix
       self.kf.P *= 10.
