@@ -230,11 +230,10 @@ if __name__ == '__main__':
     parser.add_argument("--min_conf", type=float,
         default=0.3,
         help="minimum allowed confidence for 3d detections to be considered valid")
+    parser.add_argument("--output", type=str, help="Output Path")
 
     args = parser.parse_args()
-    # tracks will be dumped into a subfolder of this name
-    save_dirname = f'{args.split}-split-track-preds'
-    save_dirname += f'-maxage{args.max_age}-minhits{args.min_hits}-conf{args.min_conf}'
+    save_dirname = f'{args.output}-maxage{args.max_age}-minhits{args.min_hits}-conf{args.min_conf}'
 
     if args.split == 'train':
         args.dets_dataroot += '/training'
